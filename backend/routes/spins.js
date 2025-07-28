@@ -12,12 +12,16 @@ function sleep(ms) {
 /* GET users listing. */
 
 router.get('/:url', async function(req, res, next) {
-    let decoded = decodeURI(req.params.url);
     const getGenres = req.query.getGenres;
+    const regexp = new RegExp("https:\/\/spinitron.com\/.*\/dj\/.*\/.*");
 
-  
-    // let spins = await getSpins("https://spinitron.com/WKNC/dj/173456/DJ-Sles");
-    let spins = await getSpins("https://spinitron.com/" + req.params.url, getGenres);
+    if(!req.params.url.match(regexp)) {
+      return res.status(400).send({
+        message: 'Invalid URL'
+      });
+    }
+
+    let spins = await getSpins(req.params.url, getGenres);
 
     res.send(spins);
 
