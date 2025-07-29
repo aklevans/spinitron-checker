@@ -1,0 +1,18 @@
+/* #left {
+    min-width: 500px;
+} */
+
+
+
+.artistName:hover {
+    box-shadow: 0px 0px 4px gray
+}
+
+.artistName {
+        border-radius: 5px;
+
+}
+
+/* #filter-by-artist {
+    min-width: 100px;
+} */
