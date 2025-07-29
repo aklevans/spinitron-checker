@@ -86,6 +86,7 @@ const Home = () => {
                     {loading ? 
                         <div className="spinner-border m-2" role="status">
                             <span className="sr-only"></span>
+                            <div>will take a minute, im not paying for better hosting sorry 🥀</div>
                         </div> : null
                     }
                 </form>
