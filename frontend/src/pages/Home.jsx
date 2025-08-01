@@ -12,37 +12,56 @@ import { useState, useEffect, useRef } from 'react';
 const Home = () => {
     const [spinitronURL, setSpinitronURL] = useState("");
     const [loading, setLoading] = useState(false);
-    const [spins, setSpins] = useState([]);
+    const [spinsData, setSpinsData] = useState([]);
     const [tags, setTags] = useState([]);
     const [artist, setArtist] = useState(null);
     const [searchArtist, setSearchArtist] = useState(null);
-
+    const [isFromCache, setIsFromCache] = useState(false);
+    
     const [unfilteredSpins, setUnfilteredSpins] = useState([]); //without filters
 
-    function getSpins() {
+    function getSpins(force) {
+        
         setLoading(true);
         const regexp = new RegExp("https:\/\/spinitron.com\/.*\/dj\/.*\/.*");
         if(!spinitronURL.match(regexp)) {
             setLoading(false);
             alert("Invalid URL. Are you sure you are using a DJ url and not a playist url?");
             setSpinitronURL("");
-        } else {
-            axios.get(`/api/spins/${encodeURIComponent(spinitronURL)}`, {timeout: 100000}).then((response) => {
-                console.log(response.data);
+            return;
+        }
+        console.log(force);
+        if(!force) {
+            const cachedSpins = JSON.parse(localStorage.getItem(spinitronURL));
+            console.log(cachedSpins);
+            if(cachedSpins) {
+                setIsFromCache(true);
+                let date = new Date(cachedSpins.date);
+                console.log(date);
+                setSpinsData(cachedSpins);
+                setUnfilteredSpins(cachedSpins.spins);
                 setLoading(false);
-                setUnfilteredSpins(response.data);
-                setSpins(response.data);
                 setTags([]);
-            });
-            // console.log(spinitronURL)
-            // getSpins2(spinitronURL, false).then((response) => {
-            //     console.log(response);
-            // });
-
+                return;
+            }
         }
 
-
+        axios.get(`/api/spins/${encodeURIComponent(spinitronURL)}`, {timeout: 100000}).then((response) => {
+            console.log(response.data);
+            setIsFromCache(false);
+            setLoading(false);
+            setUnfilteredSpins(response.data);
+            let storedSpins = {
+                date: new Date(),
+                spins: response.data
+            }
+            setSpinsData(storedSpins);
+            localStorage.setItem(spinitronURL, JSON.stringify(storedSpins));
+            setTags([]);
+        });
+                
     }
+
     
 
 
@@ -51,15 +70,18 @@ const Home = () => {
         // let newTags = [...tags, artist]
         // setTags(newTags);
         setArtist(artist);
-        setSpins(unfilteredSpins.filter(spin => {
-            return spin.artist.toLowerCase() == artist.toLowerCase();
-        }));
+        setSpinsData({
+            date: spinsData.date,
+            spins: unfilteredSpins.filter(spin => {
+                return spin.artist.toLowerCase() == artist.toLowerCase();
+            })
+        });
     }
 
     function clearFilters() {
         // setTags([]);
         setArtist(null);
-        setSpins(unfilteredSpins);
+        setSpinsData({date: spinsData.date, spins: unfilteredSpins});
     }
 
     function handleSubmit(event) {
@@ -68,13 +90,15 @@ const Home = () => {
         setSearchArtist("");
     }
 
+
+    
     // apiCall();
     return (
         <div className="container">
 
             <div>
                 
-                <form action={getSpins} className="form-group mb-3" >
+                <form action={() => getSpins(false)} className="form-group mb-3" >
                     <label for="spinitron-url" className="form-label">Paste your Spinitron DJ URL Here</label>
                     <div className="d-flex">
                         <input className="form-control m-1" placeholder="https://spinitron.com/.../dj/.../..."value={spinitronURL} name="spinitron-url" onChange={(e) => setSpinitronURL(e.target.value)}/>
@@ -84,17 +108,22 @@ const Home = () => {
 
                     
                     {loading ? 
-                    <div>
-                        <div className="spinner-border m-2" role="status">
-                            <span className="sr-only"></span>
-                            
-                        </div>
-                        <div>will take a minute, im not paying for better hosting sorry 🥀</div>
-                    </div> : null
-
+                        <div>
+                            <div className="spinner-border m-2" role="status">
+                                <span className="sr-only"></span>
+                                
+                            </div>
+                            <div>will take a minute, im not paying for better hosting sorry 🥀</div>
+                        </div> : null
                     }
+                    
                 </form>
-                
+                {isFromCache && !loading ? 
+                    <div className="border border-primary rounded p-1 m-1">
+                        Data is cached from {(new Date(spinsData.date)).toString()}
+                        <button className="btn btn-sm btn-info m-1" onClick={() => getSpins(true)}>Recalculate Data</button>
+                    </div> : null
+                    }
                 {unfilteredSpins.length != 0 && !loading ? 
                 <>
                     <h2>Top Artists</h2>
@@ -116,11 +145,11 @@ const Home = () => {
                         </div>
                         
                         
-                        {spins.length == 0 ? 
+                        {spinsData.spins.length == 0 ? 
                             <div className="text-danger my-2">
                                 No songs match filter
                             </div> : 
-                            <div className="my-1 fw-light fs-6 ">Total songs: {spins.length}</div>
+                            <div className="my-1 fw-light fs-6 ">Total songs: {spinsData.spins.length}</div>
                             
 
                         }
@@ -128,7 +157,7 @@ const Home = () => {
                             {artist == null ? null : <a onClick={clearFilters}><Tag  data={artist}></Tag></a>}
                         </div>
 
-                        {spins.map(spin => (
+                        {spinsData.spins.map(spin => (
                             <div className="row my-2">
                                 <div className="col px-1 text-break">
                                     <a  onClick={() => filterArtist(spin.artist)} > <div className="p-1 fw-bold artistName">{spin.artist}</div></a>
