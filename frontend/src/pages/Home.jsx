@@ -43,7 +43,7 @@ const Home = () => {
         if(!url.match(regexp)) {
             console.log(url);
             setLoading(false);
-            alert("Invalid URL. Are you sure you are using a DJ url and not a playist url?");
+            alert("Invalid URL. Are you sure you are using a DJ url and not a playlist url?");
             setSpinitronURL("");
             return;
         }
