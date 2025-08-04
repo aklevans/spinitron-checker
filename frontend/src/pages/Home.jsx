@@ -1,6 +1,7 @@
 import axios from 'axios'
 import SongBarChart from "../components/SongBarChart.jsx";
 import Tag from "../components/Tag.jsx";
+import { useNavigate, useLocation, useSearchParams } from "react-router";
 
 import './home.css';
 
@@ -17,14 +18,30 @@ const Home = () => {
     const [artist, setArtist] = useState(null);
     const [searchArtist, setSearchArtist] = useState(null);
     const [isFromCache, setIsFromCache] = useState(false);
-    
     const [unfilteredSpins, setUnfilteredSpins] = useState([]); //without filters
+    const [searchParams, setSearchParams] = useSearchParams();
 
-    function getSpins(force) {
-        
+    const mode = process.env.REACT_APP_MODE || "default";
+    console.log(mode);
+
+    function setParam() {
+        setSearchParams({ url: spinitronURL });
+    }
+
+    useEffect(() => {
+        let url = searchParams.get('url');
+        console.log(url);
+        if(url) {
+            setSpinitronURL(url);
+            getSpins(url, false);
+        }
+    }, [searchParams])
+
+    function getSpins(url, force) {
         setLoading(true);
         const regexp = new RegExp("https:\/\/spinitron.com\/.*\/dj\/.*\/.*");
-        if(!spinitronURL.match(regexp)) {
+        if(!url.match(regexp)) {
+            console.log(url);
             setLoading(false);
             alert("Invalid URL. Are you sure you are using a DJ url and not a playist url?");
             setSpinitronURL("");
@@ -32,8 +49,7 @@ const Home = () => {
         }
         console.log(force);
         if(!force) {
-            const cachedSpins = JSON.parse(localStorage.getItem(spinitronURL));
-            console.log(cachedSpins);
+            const cachedSpins = JSON.parse(localStorage.getItem(url));
             if(cachedSpins) {
                 setIsFromCache(true);
                 let date = new Date(cachedSpins.date);
@@ -45,8 +61,11 @@ const Home = () => {
                 return;
             }
         }
-
-        axios.get(`/api/spins/${encodeURIComponent(spinitronURL)}`, {timeout: 100000}).then((response) => {
+        let api_url = `/api/spins/${encodeURIComponent(url)}`;
+        if(mode === "dev") {
+            api_url = "http://localhost:8080" + api_url;
+        }
+        axios.get(api_url, {timeout: 100000}).then((response) => {
             console.log(response.data);
             setIsFromCache(false);
             setLoading(false);
@@ -56,7 +75,7 @@ const Home = () => {
                 spins: response.data
             }
             setSpinsData(storedSpins);
-            localStorage.setItem(spinitronURL, JSON.stringify(storedSpins));
+            localStorage.setItem(url, JSON.stringify(storedSpins));
             setTags([]);
         });
                 
@@ -98,7 +117,7 @@ const Home = () => {
 
             <div>
                 
-                <form action={() => getSpins(false)} className="form-group mb-3" >
+                <form action={() => setParam()} className="form-group mb-3" >
                     <label for="spinitron-url" className="form-label">Paste your Spinitron DJ URL Here</label>
                     <div className="d-flex">
                         <input className="form-control m-1" placeholder="https://spinitron.com/.../dj/.../..."value={spinitronURL} name="spinitron-url" onChange={(e) => setSpinitronURL(e.target.value)}/>
@@ -115,13 +134,13 @@ const Home = () => {
                             </div>
                             <div>will take a minute, im not paying for better hosting sorry 🥀</div>
                         </div> : null
-                    }
+                    } 
                     
                 </form>
                 {isFromCache && !loading ? 
                     <div className="border border-primary rounded p-1 m-1">
                         Data is cached from {(new Date(spinsData.date)).toString()}
-                        <button className="btn btn-sm btn-info m-1" onClick={() => getSpins(true)}>Recalculate Data</button>
+                        <button className="btn btn-sm btn-info m-1" onClick={() => getSpins(spinitronURL, true)}>Refetch Data</button>
                     </div> : null
                     }
                 {unfilteredSpins.length != 0 && !loading ? 

@@ -27,6 +27,10 @@ router.get('/:url', async function(req, res, next) {
 
 });
 
+router.get('/test', function(req, res, next) {
+  res.send("hi");
+})
+
 async function getTags(artist, song, release) {
 
   const recordingResponse = await fetch(`https://musicbrainz.org/ws/2/recording/?query=recording:%22${song}%22%20AND%20artist:%22${artist}%22&fmt=json`, {
